@@ -37,6 +37,8 @@ async function bootstrap() {
     prefix: '/uploads',
   });
 
+  
+
   // ✅ Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('NestJS Best Structure API')
