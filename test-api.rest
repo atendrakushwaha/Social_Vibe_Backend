@@ -1,0 +1,119 @@
+### NestJS API Testing - REST Client
+
+@baseUrl = http://localhost:3000/api
+@token = YOUR_JWT_TOKEN_HERE
+
+###############################################
+# HEALTH CHECKS
+###############################################
+
+### Health Ping - Simple server check
+GET {{baseUrl}}/health/ping
+
+### Complete Health Check
+GET {{baseUrl}}/health
+
+
+###############################################
+# AUTHENTICATION
+###############################################
+
+### Register New User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Atendra Kumar",
+  "email": "atendra@gmail.com",
+  "password": "password123",
+  "role": "user"
+}
+
+### Login User
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "atendra@gmail.com",
+  "password": "password123"
+}
+
+### Extract token from login response
+@authToken = {{login.response.body.accessToken}}
+
+
+###############################################
+# USERS (Protected Routes)
+###############################################
+
+### Get Current User Profile
+GET {{baseUrl}}/users/profile
+Authorization: Bearer {{authToken}}
+
+
+###############################################
+# PROFILE (Protected Routes)
+###############################################
+
+### Create Profile
+POST {{baseUrl}}/profile
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Atendra Kumar",
+  "age": 28,
+  "address": "123 Main Street, City",
+  "phone": "9876543210",
+  "avatar": "https://example.com/avatar.jpg"
+}
+
+### Get Profile
+GET {{baseUrl}}/profile
+Authorization: Bearer {{authToken}}
+
+### Update Profile
+PATCH {{baseUrl}}/profile
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "age": 29,
+  "address": "456 New Address, City"
+}
+
+### Delete Profile
+DELETE {{baseUrl}}/profile
+Authorization: Bearer {{authToken}}
+
+
+###############################################
+# ERROR CASES - Testing validation
+###############################################
+
+### Register with Invalid Email
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "invalid-email",
+  "password": "password123"
+}
+
+### Login with Wrong Password
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "atendra@gmail.com",
+  "password": "wrongpassword"
+}
+
+### Access Protected Route Without Token
+GET {{baseUrl}}/users/profile
+
+### Access Protected Route With Invalid Token
+GET {{baseUrl}}/users/profile
+Authorization: Bearer invalid-token-here

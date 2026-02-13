@@ -1,0 +1,352 @@
+### Instagram Clone API - Test Requests
+
+# Base URL
+@baseUrl = http://localhost:3000
+@accessToken = 
+
+### Health Check
+GET {{baseUrl}}/health
+
+### =====================
+### AUTHENTICATION
+### =====================
+
+### Register User 1
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "Password123!",
+  "fullName": "John Doe"
+}
+
+### Register User 2
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "janedoe",
+  "email": "jane@example.com",
+  "password": "Password123!",
+  "fullName": "Jane Doe"
+}
+
+### Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "Password123!"
+}
+
+### =====================
+### POSTS
+### =====================
+
+### Create Post
+POST {{baseUrl}}/posts
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "media": [
+    {
+      "url": "https://picsum.photos/800/600",
+      "type": "image",
+      "altText": "Beautiful view"
+    }
+  ],
+  "caption": "Amazing sunset at the beach! #sunset #beach #nature @janedoe",
+  "visibility": "public"
+}
+
+### Get Post by ID
+GET {{baseUrl}}/posts/POST_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### Get User Posts
+GET {{baseUrl}}/posts/user/USER_ID_HERE?page=1&limit=12
+Authorization: Bearer {{accessToken}}
+
+### Get Posts by Hashtag
+GET {{baseUrl}}/posts/hashtag/sunset?page=1&limit=12
+
+### Get Trending Posts
+GET {{baseUrl}}/posts/trending?page=1&limit=12
+
+### Update Post
+PATCH {{baseUrl}}/posts/POST_ID_HERE
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "caption": "Updated caption! #updated",
+  "commentsDisabled": false
+}
+
+### Delete Post
+DELETE {{baseUrl}}/posts/POST_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### Increment Post View
+POST {{baseUrl}}/posts/POST_ID_HERE/view
+
+### =====================
+### COMMENTS
+### =====================
+
+### Add Comment to Post
+POST {{baseUrl}}/comments/posts/POST_ID_HERE
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "content": "Great post! 🔥 @johndoe"
+}
+
+### Get Post Comments
+GET {{baseUrl}}/comments/posts/POST_ID_HERE?page=1&limit=20
+
+### Reply to Comment
+POST {{baseUrl}}/comments/posts/POST_ID_HERE
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "content": "Thanks! 😊",
+  "parentId": "PARENT_COMMENT_ID"
+}
+
+### Get Comment Replies
+GET {{baseUrl}}/comments/COMMENT_ID_HERE/replies?page=1&limit=10
+
+### Update Comment
+PATCH {{baseUrl}}/comments/COMMENT_ID_HERE
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "content": "Updated comment text"
+}
+
+### Delete Comment
+DELETE {{baseUrl}}/comments/COMMENT_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### Pin Comment
+POST {{baseUrl}}/comments/COMMENT_ID_HERE/pin
+Authorization: Bearer {{accessToken}}
+
+### =====================
+### LIKES
+### =====================
+
+### Like Post
+POST {{baseUrl}}/likes/posts/POST_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### Unlike Post (same endpoint toggles)
+POST {{baseUrl}}/likes/posts/POST_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### Like Comment
+POST {{baseUrl}}/likes/comments/COMMENT_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### Get Post Likers
+GET {{baseUrl}}/likes/posts/POST_ID_HERE?page=1&limit=20
+
+### Check if Liked
+GET {{baseUrl}}/likes/posts/POST_ID_HERE/check
+Authorization: Bearer {{accessToken}}
+
+### =====================
+### FOLLOWS
+### =====================
+
+### Follow User
+POST {{baseUrl}}/follows/USER_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### Unfollow User
+DELETE {{baseUrl}}/follows/USER_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### Get Followers
+GET {{baseUrl}}/follows/followers/USER_ID_HERE?page=1&limit=20
+
+### Get Following
+GET {{baseUrl}}/follows/following/USER_ID_HERE?page=1&limit=20
+
+### Get Follow Requests
+GET {{baseUrl}}/follows/requests?page=1&limit=20
+Authorization: Bearer {{accessToken}}
+
+### Accept Follow Request
+PATCH {{baseUrl}}/follows/requests/REQUEST_ID_HERE/accept
+Authorization: Bearer {{accessToken}}
+
+### Reject Follow Request
+DELETE {{baseUrl}}/follows/requests/REQUEST_ID_HERE/reject
+Authorization: Bearer {{accessToken}}
+
+### Get Follow Status
+GET {{baseUrl}}/follows/status/USER_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### =====================
+### FEED
+### =====================
+
+### Get Personalized Feed
+GET {{baseUrl}}/feed?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+### Get Following Feed
+GET {{baseUrl}}/feed/following?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+### Get Explore Feed
+GET {{baseUrl}}/feed/explore?page=1&limit=12
+Authorization: Bearer {{accessToken}}
+
+### =====================
+### STORIES
+### =====================
+
+### Create Story
+POST {{baseUrl}}/stories
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "media": {
+    "url": "https://picsum.photos/1080/1920",
+    "type": "image"
+  },
+  "caption": "My day! #lifestyle",
+  "visibility": "public"
+}
+
+### Get Active Stories
+GET {{baseUrl}}/stories
+Authorization: Bearer {{accessToken}}
+
+### Mark Story as Viewed
+POST {{baseUrl}}/stories/STORY_ID_HERE/view
+Authorization: Bearer {{accessToken}}
+
+### =====================
+### REELS
+### =====================
+
+### Upload Reel
+POST {{baseUrl}}/reels
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "videoUrl": "https://example.com/video.mp4",
+  "thumbnailUrl": "https://picsum.photos/1080/1920",
+  "caption": "Check out this reel! #reels #viral"
+}
+
+### Get Reels Feed
+GET {{baseUrl}}/reels?page=1&limit=10
+
+### Get Trending Reels
+GET {{baseUrl}}/reels/trending?page=1&limit=10
+
+### Increment Reel View
+POST {{baseUrl}}/reels/REEL_ID_HERE/view
+
+### =====================
+### NOTIFICATIONS
+### =====================
+
+### Get Notifications
+GET {{baseUrl}}/notifications?page=1&limit=20
+Authorization: Bearer {{accessToken}}
+
+### Mark Notification as Read
+PATCH {{baseUrl}}/notifications/NOTIFICATION_ID_HERE/read
+Authorization: Bearer {{accessToken}}
+
+### Mark All as Read
+PATCH {{baseUrl}}/notifications/read-all
+Authorization: Bearer {{accessToken}}
+
+### Delete Notification
+DELETE {{baseUrl}}/notifications/NOTIFICATION_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### =====================
+### BOOKMARKS
+### =====================
+
+### Save Post
+POST {{baseUrl}}/bookmarks/POST_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### Get Saved Posts
+GET {{baseUrl}}/bookmarks?page=1&limit=12
+Authorization: Bearer {{accessToken}}
+
+### Get Saved Posts by Collection
+GET {{baseUrl}}/bookmarks?collection=favorites&page=1&limit=12
+Authorization: Bearer {{accessToken}}
+
+### Remove Bookmark
+DELETE {{baseUrl}}/bookmarks/POST_ID_HERE
+Authorization: Bearer {{accessToken}}
+
+### =====================
+### HASHTAGS
+### =====================
+
+### Get Trending Hashtags
+GET {{baseUrl}}/hashtags/trending?limit=20
+
+### Search Hashtags
+GET {{baseUrl}}/hashtags/search?q=sunset&limit=20
+
+### =====================
+### SEARCH
+### =====================
+
+### Global Search
+GET {{baseUrl}}/search?q=john
+
+### Search Users
+GET {{baseUrl}}/search/users?q=john&limit=20
+
+### Search Hashtags
+GET {{baseUrl}}/search/hashtags?q=sun&limit=20
+
+### Search Posts
+GET {{baseUrl}}/search/posts?q=beach&limit=20
+
+### =====================
+### USERS (If endpoints exist)
+### =====================
+
+### Get User Profile
+GET {{baseUrl}}/users/USER_ID_HERE
+
+### Get Current User
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+
+### Update Profile
+PATCH {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "fullName": "John Updated",
+  "bio": "Software developer | Travel enthusiast 🌍",
+  "website": "https://johndoe.com"
+}
