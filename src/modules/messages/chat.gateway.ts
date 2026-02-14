@@ -44,7 +44,6 @@ interface VideoCallSignal {
         origin: '*',
         credentials: true,
     },
-    namespace: '/chat',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
@@ -150,7 +149,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: { conversationId: string; type: string; content?: string; attachments?: any[] },
     ) {
         const user = this.onlineUsers.get(client.id);
-        if (!user) return;
+        if (!user) return { success: false, error: 'User not connected or authenticated' };
 
         try {
             // Save message to database
@@ -176,6 +175,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     async broadcastMessage(message: any) {
         try {
             const conversationId = message.conversationId;
+            if (!message.senderId) return; // Prevent crash if senderId is missing
             const senderId = typeof message.senderId === 'object' ? message.senderId._id : message.senderId;
 
             // Need to fetch conversation to get participants
