@@ -362,11 +362,36 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const user = this.onlineUsers.get(client.id);
         if (!user) return { success: false };
 
-        const call = this.activeCalls.get(data.callId);
+        let call = this.activeCalls.get(data.callId);
+
+        // Robustness: If call missing from memory (e.g. server restart), try fetching from DB
+        if (!call) {
+            try {
+                const dbCall = await this.callsService.getCall(data.callId);
+                if (dbCall && dbCall.status === CallStatus.INITIATED) {
+                    call = {
+                        callId: dbCall._id.toString(),
+                        from: dbCall.callerId.toString(),
+                        to: dbCall.receiverId.toString(),
+                        callType: dbCall.callType as any,
+                        signal: null // Signal lost from memory, but new answer signal will be used
+                    };
+                    // Restore to memory
+                    this.activeCalls.set(data.callId, call);
+                }
+            } catch (e) {
+                console.error('Error fetching call from DB:', e);
+            }
+        }
+
         if (!call) return { success: false, error: 'Call not found' };
 
         // Update DB status
         await this.callsService.updateCallStatus(data.callId, CallStatus.ANSWERED);
+
+        console.log(`[ChatGateway] Handling Answer. CallID: ${data.callId}`);
+        console.log(`[ChatGateway] Call Object:`, call);
+        console.log(`[ChatGateway] Emitting to Room: user:${call.from}`);
 
         // Send answer signal to caller
         this.server.to(`user:${call.from}`).emit('call:answered', {
