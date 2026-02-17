@@ -138,4 +138,28 @@ export class FeedService {
 
         return { posts, total };
     }
+    async getLatestFeed(page = 1, limit = 10): Promise<{ posts: PostDocument[]; total: number }> {
+        const skip = (page - 1) * limit;
+
+        const [posts, total] = await Promise.all([
+            this.postModel
+                .find({
+                    deletedAt: null,
+                    isArchived: false,
+                    visibility: 'public',
+                })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate('userId', 'username fullName avatar isVerified')
+                .exec(),
+            this.postModel.countDocuments({
+                deletedAt: null,
+                isArchived: false,
+                visibility: 'public',
+            }),
+        ]);
+
+        return { posts, total };
+    }
 }

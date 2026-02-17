@@ -45,4 +45,14 @@ export class FeedController {
     ) {
         return this.feedService.getExploreFeed(req.user.sub, +page, +limit);
     }
+    @Get('latest')
+    @ApiOperation({ summary: 'Get latest posts (global)' })
+    @ApiQuery({ name: 'page', required: false })
+    @ApiQuery({ name: 'limit', required: false })
+    async getLatest(
+        @Query('page') page = 1,
+        @Query('limit') limit = 10,
+    ) {
+        return this.feedService.getLatestFeed(+page, +limit);
+    }
 }
