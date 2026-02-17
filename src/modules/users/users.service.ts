@@ -151,4 +151,25 @@ export class UsersService {
       total: suggestions.length,
     };
   }
+
+  async updateProfile(userId: string, updateData: any): Promise<UserDocument> {
+    const allowedUpdates = ['fullName', 'bio', 'website', 'gender'];
+    const updates = {};
+
+    Object.keys(updateData).forEach(key => {
+      if (allowedUpdates.includes(key)) {
+        updates[key] = updateData[key];
+      }
+    });
+
+    const user = await this.userModel.findByIdAndUpdate(userId, updates, { new: true }).select('-password');
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  async updateAvatar(userId: string, avatarUrl: string): Promise<UserDocument> {
+    const user = await this.userModel.findByIdAndUpdate(userId, { avatar: avatarUrl }, { new: true }).select('-password');
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
 }

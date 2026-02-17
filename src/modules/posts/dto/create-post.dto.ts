@@ -17,7 +17,8 @@ export class CreatePostDto {
         }
     })
     @IsArray()
-    media: MediaItem[];
+    @IsOptional()
+    media?: MediaItem[];
 
     @ApiPropertyOptional({ description: 'Post caption', maxLength: 2200 })
     @IsString()

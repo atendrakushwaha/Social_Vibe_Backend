@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request, Query, HttpCode, HttpStatus, UseInterceptors, UploadedFiles, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Query, HttpCode, HttpStatus, UseInterceptors, UploadedFiles, UploadedFile, BadRequestException, HttpException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { ReelsService } from './reels.service';
@@ -17,10 +17,7 @@ export class ReelsController {
     @ApiOperation({ summary: 'Upload reel (video + thumbnail)' })
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(
-        FileFieldsInterceptor([
-            { name: 'video', maxCount: 1 },
-            { name: 'thumbnail', maxCount: 1 },
-        ], {
+        FileInterceptor('file', {
             storage: diskStorage({
                 destination: './uploads',
                 filename: (req, file, cb) => {
@@ -48,32 +45,26 @@ export class ReelsController {
     async create(
         @Request() req,
         @Body() body: any,
-        @UploadedFiles() files: { video?: Express.Multer.File[], thumbnail?: Express.Multer.File[] }
+        @UploadedFile() file: Express.Multer.File
     ) {
-        const videoFile = files?.video?.[0];
-        const thumbnailFile = files?.thumbnail?.[0];
+        try {
+            let videoUrl = body.videoUrl;
+            let thumbnailUrl = body.thumbnailUrl || 'https://placehold.co/400x600?text=No+Thumbnail';
+            const baseUrl = process.env.APP_URL || 'http://localhost:3000';
 
-        let videoUrl = body.videoUrl;
-        let thumbnailUrl = body.thumbnailUrl;
+            if (file) {
+                videoUrl = `${baseUrl}/uploads/${file.filename}`;
+            }
 
-        const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+            if (!videoUrl) {
+                throw new BadRequestException('Video is required (either file upload or videoUrl)');
+            }
 
-        if (videoFile) {
-            videoUrl = `${baseUrl}/uploads/${videoFile.filename}`;
+            return await this.reelsService.create(req.user.sub, videoUrl, thumbnailUrl, body?.caption);
+        } catch (error) {
+            console.error('Reel create error:', error);
+            throw new HttpException(error.message || 'Failed to create reel', HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
-        if (thumbnailFile) {
-            thumbnailUrl = `${baseUrl}/uploads/${thumbnailFile.filename}`;
-        }
-
-        if (!videoUrl) {
-            throw new BadRequestException('Video is required (either file upload or videoUrl)');
-        }
-        if (!thumbnailUrl) {
-            thumbnailUrl = '';
-        }
-
-        return this.reelsService.create(req.user.sub, videoUrl, thumbnailUrl, body.caption);
     }
 
     @Get()

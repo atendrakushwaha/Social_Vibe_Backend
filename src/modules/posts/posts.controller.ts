@@ -11,8 +11,13 @@ import {
     Query,
     HttpCode,
     HttpStatus,
+    UseInterceptors,
+    UploadedFiles,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -27,8 +32,46 @@ export class PostsController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Create a new post' })
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(FilesInterceptor('files', 10, {
+        storage: diskStorage({
+            destination: './uploads',
+            filename: (req, file, cb) => {
+                const randomName = Array(32).fill(null).map(() => Math.round(Math.random() * 16).toString(16)).join('');
+                cb(null, `${randomName}${extname(file.originalname)}`);
+            },
+        }),
+    }))
     @ApiResponse({ status: 201, description: 'Post created successfully' })
-    async create(@Request() req, @Body() createPostDto: CreatePostDto) {
+    async create(
+        @Request() req,
+        @Body() body: any, // Use query/body as any to bypass auto-validation for multipart DTO mismatch
+        @UploadedFiles() files: Array<Express.Multer.File>
+    ) {
+        // Construct Media Items from uploaded files
+        const media = files ? files.map(file => ({
+            url: `${process.env.APP_URL || 'http://localhost:3000'}/uploads/${file.filename}`,
+            type: file.mimetype.startsWith('video/') ? 'video' : 'image', // Simple type detection
+            thumbnail: '', // Optional: generate thumbnail
+            altText: ''
+        })) : [];
+
+        // Parse location if string
+        let location = body.location;
+        if (typeof location === 'string') {
+            try {
+                location = JSON.parse(location);
+            } catch (e) {
+                // Keep as is or null
+            }
+        }
+
+        const createPostDto: CreatePostDto = {
+            ...body,
+            location,
+            media
+        };
+
         return this.postsService.create(req.user.sub, createPostDto);
     }
 
