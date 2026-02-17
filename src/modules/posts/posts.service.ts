@@ -31,6 +31,7 @@ export class PostsService {
         });
 
         const savedPost = await post.save();
+        await savedPost.populate('userId', 'username fullName avatar isVerified');
 
         // TODO: Update user's post count
         // TODO: Create hashtag documents

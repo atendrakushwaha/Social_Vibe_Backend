@@ -26,6 +26,7 @@ export class FeedService {
             .select('followingId');
 
         const followingIds = following.map(f => f.followingId);
+        followingIds.push(new Types.ObjectId(userId)); // Include own posts
 
         // Get posts from followed users
         const posts = await this.postModel
