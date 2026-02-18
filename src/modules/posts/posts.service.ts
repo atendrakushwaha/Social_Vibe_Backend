@@ -5,10 +5,7 @@ import { Post, PostDocument } from './schemas/post.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-
-@Injectable()
-    // ... imports
-    import { EventsGateway } from '../events/events.gateway';
+import { EventsGateway } from '../events/events.gateway';
 
 @Injectable()
 export class PostsService {
