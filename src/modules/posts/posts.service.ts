@@ -7,10 +7,15 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
+    // ... imports
+    import { EventsGateway } from '../events/events.gateway';
+
+@Injectable()
 export class PostsService {
     constructor(
         @InjectModel(Post.name) private postModel: Model<PostDocument>,
         @InjectModel(User.name) private userModel: Model<UserDocument>,
+        private eventsGateway: EventsGateway,
     ) { }
 
     /**
@@ -32,6 +37,9 @@ export class PostsService {
 
         const savedPost = await post.save();
         await savedPost.populate('userId', 'username fullName avatar isVerified');
+
+        // Broadcast new post
+        this.eventsGateway.emitNewPost(savedPost);
 
         // TODO: Update user's post count
         // TODO: Create hashtag documents

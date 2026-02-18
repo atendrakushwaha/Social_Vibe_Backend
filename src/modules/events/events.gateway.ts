@@ -162,4 +162,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     getOnlineUsersCount(): number {
         return this.userSockets.size;
     }
+    // Broadcast new post to all users
+    emitNewPost(post: any) {
+        this.server.emit('post:new', post);
+    }
 }
