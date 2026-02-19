@@ -172,4 +172,9 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
+  async getUserById(userId: string) {
+    const user = await this.userModel.findById(userId).select('-password').lean();
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
 }

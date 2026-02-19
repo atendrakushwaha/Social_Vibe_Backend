@@ -114,6 +114,18 @@ export class ReelsController {
         return this.reelsService.addComment(req.user.sub, id, body.content);
     }
 
+    @Get('user/:userId')
+    @ApiOperation({ summary: 'Get user reels' })
+    @ApiQuery({ name: 'page', required: false })
+    @ApiQuery({ name: 'limit', required: false })
+    async getUserReels(
+        @Param('userId') userId: string,
+        @Query('page') page = 1,
+        @Query('limit') limit = 10,
+    ) {
+        return this.reelsService.getUserReels(userId, +page, +limit);
+    }
+
     @Get(':id/comments')
     @ApiOperation({ summary: 'Get reel comments' })
     async getComments(@Param('id') id: string, @Query('page') page = 1, @Query('limit') limit = 20) {

@@ -19,7 +19,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  
+
 
   // ✅ Enable CORS for frontend
   app.enableCors({
@@ -37,7 +37,7 @@ async function bootstrap() {
     prefix: '/uploads',
   });
 
-  
+
 
   // ✅ Swagger configuration
   const config = new DocumentBuilder()
@@ -54,7 +54,7 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   // console.log(`🚀 API running: http://localhost:${port}/api`);
-  console.log(`🚀 API running: http://192.168.29.229:${port}/api`);
+  console.log(`🚀 API running: http://10.51.26.245:${port}/api`);
 
   console.log(`📚 Swagger: http://localhost:${port}/swagger`);
 
