@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 // Existing modules
 import { AuthModule } from './modules/auth/auth.module';
@@ -66,6 +68,12 @@ import jwtConfig from './config/jwt.config';
     EventsModule,
     AdminModule,
     UploadModule,
+
+    // Serve Static Files
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
   ],
 })
 export class AppModule { }

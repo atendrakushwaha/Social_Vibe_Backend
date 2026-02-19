@@ -24,10 +24,7 @@ export class UsersController {
     description: 'Unauthorized - invalid or missing token'
   })
   async getProfile(@Request() req: any) {
-    return {
-      userId: req.user.userId,
-      email: req.user.email,
-    };
+    return this.usersService.getUserById(req.user.sub);
   }
 
   /**

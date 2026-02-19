@@ -141,9 +141,28 @@ export class ReelsService {
         await this.reelModel.findByIdAndUpdate(id, { $inc: { sharesCount: 1 } });
     }
 
-    // Get Comments
     async getComments(reelId: string, page: number = 1, limit: number = 20) {
         return this.commentsService.findByPostId(reelId, page, limit);
+    }
+
+    async getUserReels(userId: string, page: number = 1, limit: number = 10) {
+        const skip = (page - 1) * limit;
+        const reels = await this.reelModel.find({ userId: new Types.ObjectId(userId), deletedAt: null })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate('userId', 'username fullName avatar isVerified')
+            .lean();
+
+        const total = await this.reelModel.countDocuments({ userId: new Types.ObjectId(userId), deletedAt: null });
+
+        return {
+            data: reels,
+            total,
+            page,
+            limit,
+            hasMore: skip + reels.length < total
+        };
     }
 
     private extractHashtags(text: string): string[] {
