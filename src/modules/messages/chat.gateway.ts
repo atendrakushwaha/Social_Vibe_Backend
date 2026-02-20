@@ -328,6 +328,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const dbCall = await this.callsService.createCall(user.userId, data.to, data.callType);
         const callId = dbCall._id.toString();
 
+        // Fetch caller's username for display
+        let callerName = user.userId;
+        try {
+            const callerUser = await this.userModel.findById(user.userId).select('username fullName avatar').lean();
+            if (callerUser) {
+                callerName = callerUser.username || callerUser.fullName || user.userId;
+            }
+        } catch (e) {
+            // fallback to userId
+        }
+
         const callSignal: VideoCallSignal = {
             callId,
             dbCallId: callId,
@@ -345,8 +356,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             from: user.userId,
             callType: data.callType,
             signal: data.signal,
-            callerName: user.userId, // Ideally fetch username
+            callerName,
         });
+
+        // Also emit back to caller with callId (Flutter client needs this)
+        client.emit('call:initiated', { success: true, callId });
 
         return { success: true, callId };
     }
