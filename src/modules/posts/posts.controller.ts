@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { PostsService } from './posts.service';
@@ -26,7 +27,10 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 @ApiTags('Posts')
 @Controller('posts')
 export class PostsController {
-    constructor(private readonly postsService: PostsService) { }
+    constructor(
+        private readonly postsService: PostsService,
+        private readonly cloudinaryService: CloudinaryService
+    ) { }
 
     @Post()
     @UseGuards(JwtAuthGuard)
@@ -34,13 +38,9 @@ export class PostsController {
     @ApiOperation({ summary: 'Create a new post' })
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(FilesInterceptor('files', 10, {
-        storage: diskStorage({
-            destination: './uploads',
-            filename: (req, file, cb) => {
-                const randomName = Array(32).fill(null).map(() => Math.round(Math.random() * 16).toString(16)).join('');
-                cb(null, `${randomName}${extname(file.originalname)}`);
-            },
-        }),
+        limits: {
+            fileSize: 100 * 1024 * 1024, // 100MB
+        },
     }))
     @ApiResponse({ status: 201, description: 'Post created successfully' })
     async create(
@@ -49,12 +49,24 @@ export class PostsController {
         @UploadedFiles() files: Array<Express.Multer.File>
     ) {
         // Construct Media Items from uploaded files
-        const media = files ? files.map(file => ({
-            url: `${process.env.APP_URL || 'http://localhost:3000'}/uploads/${file.filename}`,
-            type: file.mimetype.startsWith('video/') ? 'video' : 'image', // Simple type detection
-            thumbnail: '', // Optional: generate thumbnail
-            altText: ''
-        })) : [];
+        const media: any[] = [];
+        if (files) {
+            for (const file of files) {
+                let result;
+                if (file.mimetype.startsWith('video/')) {
+                    result = await this.cloudinaryService.uploadVideo(file);
+                } else {
+                    result = await this.cloudinaryService.uploadImage(file);
+                }
+
+                media.push({
+                    url: result.secure_url,
+                    type: file.mimetype.startsWith('video/') ? 'video' : 'image',
+                    thumbnail: '',
+                    altText: ''
+                });
+            }
+        }
 
         // Parse location if string
         let location = body.location;
@@ -73,6 +85,16 @@ export class PostsController {
         };
 
         return this.postsService.create(req.user.sub, createPostDto);
+    }
+    @Get('trending')
+    @ApiOperation({ summary: 'Get trending posts' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    async getTrending(
+        @Query('page') page = 1,
+        @Query('limit') limit = 12,
+    ) {
+        return this.postsService.getTrending(+page, +limit);
     }
 
     @Get(':id')
@@ -123,17 +145,6 @@ export class PostsController {
         return this.postsService.findByHashtag(hashtag, +page, +limit);
     }
 
-    @Get('trending')
-    @ApiOperation({ summary: 'Get trending posts' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
-    async getTrending(
-        @Query('page') page = 1,
-        @Query('limit') limit = 12,
-    ) {
-        return this.postsService.getTrending(+page, +limit);
-    }
-
     @Patch(':id')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
@@ -175,6 +186,12 @@ export class PostsController {
         // Use actual likes service to persist in database
         const result = await this.postsService.unlikePost(id, req.user.sub);
         return { message: 'Post unliked', success: true, ...result };
+    }
+
+    @Get(':id/likes')
+    @ApiOperation({ summary: 'Get users who liked a post' })
+    async getLikers(@Param('id') id: string) {
+        return this.postsService.getLikers(id);
     }
 
     @Get(':id/comments')

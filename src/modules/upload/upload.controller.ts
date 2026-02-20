@@ -9,12 +9,13 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @ApiTags('Upload')
 @Controller('upload')
 export class UploadController {
+    constructor(private readonly cloudinaryService: CloudinaryService) { }
+
     @Post()
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
@@ -22,16 +23,6 @@ export class UploadController {
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(
         FileInterceptor('file', {
-            storage: diskStorage({
-                destination: './uploads',
-                filename: (req, file, cb) => {
-                    const randomName = Array(32)
-                        .fill(null)
-                        .map(() => Math.round(Math.random() * 16).toString(16))
-                        .join('');
-                    cb(null, `${randomName}${extname(file.originalname)}`);
-                },
-            }),
             limits: {
                 fileSize: 100 * 1024 * 1024, // 100MB
             },
@@ -51,15 +42,18 @@ export class UploadController {
             throw new BadRequestException('No file uploaded');
         }
 
-        // In production, upload to AWS S3 or Cloudinary
-        // For now, return local file path
-        const fileUrl = `${process.env.APP_URL || 'http://localhost:3000'}/uploads/${file.filename}`;
+        let result;
+        if (file.mimetype.startsWith('video/')) {
+            result = await this.cloudinaryService.uploadVideo(file);
+        } else {
+            result = await this.cloudinaryService.uploadImage(file);
+        }
 
         return {
-            url: fileUrl,
-            filename: file.filename,
+            url: result.secure_url,
+            filename: result.public_id,
             mimetype: file.mimetype,
-            size: file.size,
+            size: result.bytes,
         };
     }
 }

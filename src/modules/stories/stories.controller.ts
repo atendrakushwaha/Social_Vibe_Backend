@@ -20,12 +20,17 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+
 @ApiTags('Stories')
 @Controller('stories')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class StoriesController {
-    constructor(private readonly storiesService: StoriesService) { }
+    constructor(
+        private readonly storiesService: StoriesService,
+        private readonly cloudinaryService: CloudinaryService
+    ) { }
 
     /**
      * Upload story media
@@ -36,16 +41,6 @@ export class StoriesController {
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(
         FileInterceptor('media', {
-            storage: diskStorage({
-                destination: './uploads',
-                filename: (req, file, cb) => {
-                    const randomName = Array(32)
-                        .fill(null)
-                        .map(() => Math.round(Math.random() * 16).toString(16))
-                        .join('');
-                    cb(null, `story-${randomName}${extname(file.originalname)}`);
-                },
-            }),
             limits: { fileSize: 100 * 1024 * 1024 },
             fileFilter: (req, file, cb) => {
                 if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|mp4|mov|avi|webp|webm)$/)) {
@@ -59,8 +54,15 @@ export class StoriesController {
         if (!file) {
             throw new BadRequestException('No file uploaded');
         }
-        const fileUrl = `${process.env.APP_URL || 'http://localhost:3000'}/uploads/${file.filename}`;
-        return { url: fileUrl };
+
+        let result;
+        if (file.mimetype.startsWith('video/')) {
+            result = await this.cloudinaryService.uploadVideo(file);
+        } else {
+            result = await this.cloudinaryService.uploadImage(file);
+        }
+
+        return { url: result.secure_url };
     }
 
     /**

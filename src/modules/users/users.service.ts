@@ -60,7 +60,7 @@ export class UsersService {
   /**
    * Get user profile by username (public data)
    */
-  async getUserByUsername(username: string) {
+  async getUserByUsername(username: string, currentUserId?: string) {
     const user = await this.userModel
       .findOne({ username })
       .select('-password')
@@ -68,6 +68,16 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    let isFollowedByMe = false;
+    if (currentUserId && currentUserId !== user._id.toString()) {
+      const followStatus = await this.followModel.findOne({
+        followerId: new Types.ObjectId(currentUserId),
+        followingId: user._id,
+        status: 'accepted'
+      });
+      isFollowedByMe = !!followStatus;
     }
 
     return {
@@ -82,13 +92,14 @@ export class UsersService {
       followersCount: user.followersCount || 0,
       followingCount: user.followingCount || 0,
       postsCount: user.postsCount || 0,
+      isFollowedByMe,
     };
   }
 
   /**
    * Search users by username or full name
    */
-  async searchUsers(query: string, page: number = 1, limit: number = 20) {
+  async searchUsers(query: string, page: number = 1, limit: number = 20, currentUserId?: string) {
     const skip = (page - 1) * limit;
 
     const users = await this.userModel
@@ -110,8 +121,26 @@ export class UsersService {
       ],
     });
 
+    let usersList = users as any[];
+
+    if (currentUserId) {
+      const userIds = usersList.map(u => u._id);
+      const followsByMe = await this.followModel.find({
+        followerId: new Types.ObjectId(currentUserId),
+        followingId: { $in: userIds },
+        status: 'accepted'
+      });
+      const followedSet = new Set(followsByMe.map(f => f.followingId.toString()));
+      usersList = usersList.map(u => ({
+        ...u,
+        isFollowedByMe: followedSet.has(u._id.toString())
+      }));
+    } else {
+      usersList = usersList.map(u => ({ ...u, isFollowedByMe: false }));
+    }
+
     return {
-      data: users,
+      data: usersList,
       total,
       page,
       limit,
@@ -144,7 +173,10 @@ export class UsersService {
 
     // 3. Shuffle
     const shuffled = users.sort(() => 0.5 - Math.random());
-    const suggestions = shuffled.slice(0, limit);
+    const suggestions = shuffled.slice(0, limit).map(u => ({
+      ...u,
+      isFollowedByMe: false
+    }));
 
     return {
       data: suggestions,

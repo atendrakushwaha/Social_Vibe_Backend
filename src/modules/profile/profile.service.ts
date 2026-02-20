@@ -16,7 +16,7 @@ export class ProfileService {
   constructor(
     @InjectModel(Profile.name)
     private readonly profileModel: Model<Profile>,
-  ) {}
+  ) { }
 
   // 🔹 Format Indian phone number → +919876543210
   private formatIndianPhone(phone?: string): string | undefined {
@@ -34,9 +34,10 @@ export class ProfileService {
   // 🔹 Build FULL avatar URL
   private buildAvatarUrl(filename?: string): string | null {
     if (!filename) return null;
+    if (filename.startsWith('http')) return filename; // Cloudinary URL
 
     const baseUrl =
-      process.env.APP_URL ;
+      process.env.APP_URL;
 
     return `${baseUrl}/uploads/avatars/${filename}`;
   }
@@ -69,7 +70,7 @@ export class ProfileService {
   async getMyProfile(userId: string) {
     const profile = await this.profileModel
       .findOne({ user: userId })
-      .populate('user', 'name email role');
+      .populate('user', 'name username email role');
 
     if (!profile) {
       throw new NotFoundException('Profile not found');
@@ -79,6 +80,48 @@ export class ProfileService {
       ...profile.toObject(),
       avatar: this.buildAvatarUrl(profile.avatar),
     };
+  }
+
+  // ✅ GET PROFILE BY USERNAME (Deprecated or update?)
+  async getProfileByUsername(username: string, currentUserId?: string) {
+    // Since we don't have direct access to UserModel here easily without circular deps or module changes,
+    // and profile is linked to user by ObjectId, we can use a virtual populate or aggregate manually if needed.
+    // However, simplest way given current setup is likely to fetch all profiles (bad) or rely on a better schema design.
+    // BUT! We can just use a trick:
+
+    // We need to inject User model ideally.
+    // Let's assume for now we can just search if we had the ID.
+
+    // Attempt 2: Use lookup in aggregation.
+    const profiles = await this.profileModel.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userInfo'
+        }
+      },
+      { $unwind: '$userInfo' },
+      { $match: { 'userInfo.username': username } }
+    ]);
+
+    if (!profiles || profiles.length === 0) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    const profile = profiles[0];
+    // Re-structure to match standard output if needed (userInfo is currently inside)
+    // Actually we want 'user' field populated like getMyProfile.
+
+    const populatedProfile = {
+      ...profile,
+      user: profile.userInfo,
+      avatar: this.buildAvatarUrl(profile.avatar)
+    };
+    delete populatedProfile.userInfo;
+
+    return populatedProfile;
   }
 
   // ✅ UPDATE PROFILE

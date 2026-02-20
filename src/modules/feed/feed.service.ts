@@ -12,6 +12,19 @@ export class FeedService {
     ) { }
 
     /**
+     * Helper: Add isLiked field to posts based on current user
+     */
+    private addIsLikedField(posts: PostDocument[], userId?: string): any[] {
+        return posts.map(post => {
+            const postObj = post.toObject();
+            postObj.isLiked = userId
+                ? post.likes.some(id => id.toString() === userId)
+                : false;
+            return postObj;
+        });
+    }
+
+    /**
      * Get personalized feed algorithm
      */
     async getPersonalizedFeed(userId: string, page = 1, limit = 10): Promise<{ posts: PostDocument[]; total: number }> {
@@ -53,7 +66,9 @@ export class FeedService {
             isArchived: false,
         });
 
-        return { posts, total };
+        const postsWithLiked = this.addIsLikedField(posts, userId);
+
+        return { posts: postsWithLiked, total };
     }
 
     /**
@@ -90,7 +105,9 @@ export class FeedService {
             }),
         ]);
 
-        return { posts, total };
+        const postsWithLiked = this.addIsLikedField(posts, userId);
+
+        return { posts: postsWithLiked, total };
     }
 
     /**
@@ -136,9 +153,11 @@ export class FeedService {
             }),
         ]);
 
-        return { posts, total };
+        const postsWithLiked = this.addIsLikedField(posts, userId);
+
+        return { posts: postsWithLiked, total };
     }
-    async getLatestFeed(page = 1, limit = 10): Promise<{ posts: PostDocument[]; total: number }> {
+    async getLatestFeed(page = 1, limit = 10, userId?: string): Promise<{ posts: any[]; total: number }> {
         const skip = (page - 1) * limit;
 
         const [posts, total] = await Promise.all([
@@ -160,6 +179,8 @@ export class FeedService {
             }),
         ]);
 
-        return { posts, total };
+        const postsWithLiked = this.addIsLikedField(posts, userId);
+
+        return { posts: postsWithLiked, total };
     }
 }

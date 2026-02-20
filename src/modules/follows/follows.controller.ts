@@ -46,27 +46,33 @@ export class FollowsController {
     }
 
     @Get('followers/:userId')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
     @ApiOperation({ summary: 'Get user followers' })
     @ApiQuery({ name: 'page', required: false })
     @ApiQuery({ name: 'limit', required: false })
     async getFollowers(
         @Param('userId') userId: string,
+        @Request() req,
         @Query('page') page = 1,
         @Query('limit') limit = 20,
     ) {
-        return this.followsService.getFollowers(userId, +page, +limit);
+        return this.followsService.getFollowers(userId, +page, +limit, req.user?.sub);
     }
 
     @Get('following/:userId')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
     @ApiOperation({ summary: 'Get user following' })
     @ApiQuery({ name: 'page', required: false })
     @ApiQuery({ name: 'limit', required: false })
     async getFollowing(
         @Param('userId') userId: string,
+        @Request() req,
         @Query('page') page = 1,
         @Query('limit') limit = 20,
     ) {
-        return this.followsService.getFollowing(userId, +page, +limit);
+        return this.followsService.getFollowing(userId, +page, +limit, req.user?.sub);
     }
 
     @Get('requests')

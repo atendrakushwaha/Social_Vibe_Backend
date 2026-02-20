@@ -27,6 +27,7 @@ import { SearchModule } from './modules/search/search.module';
 import { EventsModule } from './modules/events/events.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 
 import mongoConfig from './config/mongo.config';
 import jwtConfig from './config/jwt.config';
@@ -68,6 +69,7 @@ import jwtConfig from './config/jwt.config';
     EventsModule,
     AdminModule,
     UploadModule,
+    CloudinaryModule,
 
     // Serve Static Files
     ServeStaticModule.forRoot({

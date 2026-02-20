@@ -1,15 +1,17 @@
 import { Controller, Get, Post, Patch, UseGuards, Request, Param, Query, Body, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { UsersService } from './users.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly cloudinaryService: CloudinaryService
+  ) { }
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
@@ -44,12 +46,14 @@ export class UsersController {
 
   /**
    * Search users
-   * GET /users/search?q=query
+   * GET /users/search/query?q=query
    */
   @Get('search/query')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Search users' })
-  async searchUsers(@Query('q') query: string, @Query('page') page?: number) {
-    return this.usersService.searchUsers(query, page);
+  async searchUsers(@Query('q') query: string, @Request() req: any, @Query('page') page?: number) {
+    return this.usersService.searchUsers(query, page, 20, req.user?.sub);
   }
 
   /**
@@ -57,9 +61,11 @@ export class UsersController {
    * GET /users/:username
    */
   @Get(':username')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user profile by username' })
-  async getUserByUsername(@Param('username') username: string) {
-    return this.usersService.getUserByUsername(username);
+  async getUserByUsername(@Param('username') username: string, @Request() req) {
+    return this.usersService.getUserByUsername(username, req.user?.sub);
   }
 
   @Patch('profile')
@@ -75,18 +81,13 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update avatar' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('avatar', {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, cb) => {
-        const randomName = Array(32).fill(null).map(() => Math.round(Math.random() * 16).toString(16)).join('');
-        cb(null, `avatar-${randomName}${extname(file.originalname)}`);
-      },
-    }),
-  }))
+  @UseInterceptors(FileInterceptor('avatar'))
   async updateAvatar(@Request() req, @UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const avatarUrl = `${process.env.APP_URL || 'http://localhost:3000'}/uploads/${file.filename}`;
+
+    const result = await this.cloudinaryService.uploadImage(file);
+    const avatarUrl = result.secure_url;
+
     return this.usersService.updateAvatar(req.user.sub, avatarUrl);
   }
 }

@@ -49,10 +49,9 @@ export class FollowsService {
 
         // Update counts if follow is accepted immediately
         if (!isTargetPrivate) {
-            await Promise.all([
-                this.userModel.findByIdAndUpdate(followerId, { $inc: { followingCount: 1 } }),
-                this.userModel.findByIdAndUpdate(followingId, { $inc: { followersCount: 1 } }),
-            ]);
+            // Check if count is already increased? No, just atomic inc
+            await this.userModel.findByIdAndUpdate(followerId, { $inc: { followingCount: 1 } });
+            await this.userModel.findByIdAndUpdate(followingId, { $inc: { followersCount: 1 } });
         }
 
         return {
@@ -80,10 +79,8 @@ export class FollowsService {
 
         // Update counts if follow was accepted
         if (wasAccepted) {
-            await Promise.all([
-                this.userModel.findByIdAndUpdate(followerId, { $inc: { followingCount: -1 } }),
-                this.userModel.findByIdAndUpdate(followingId, { $inc: { followersCount: -1 } }),
-            ]);
+            await this.userModel.findByIdAndUpdate(followerId, { $inc: { followingCount: -1 } });
+            await this.userModel.findByIdAndUpdate(followingId, { $inc: { followersCount: -1 } });
         }
     }
 
@@ -146,7 +143,8 @@ export class FollowsService {
         userId: string,
         page = 1,
         limit = 20,
-    ): Promise<{ followers: FollowDocument[]; total: number }> {
+        currentUserId?: string,
+    ): Promise<{ followers: any[]; total: number }> {
         const skip = (page - 1) * limit;
 
         const [followers, total] = await Promise.all([
@@ -166,7 +164,36 @@ export class FollowsService {
             }),
         ]);
 
-        return { followers, total };
+        const followersList: any[] = followers
+            .filter(f => f.followerId)
+            .map(f => {
+                const doc = f.toObject();
+                return {
+                    ...doc,
+                    followerId: {
+                        ...(doc.followerId as any),
+                        isFollowedByMe: false
+                    }
+                };
+            });
+
+        if (currentUserId && followersList.length > 0) {
+            const followerUserIds = followersList.map(f => f.followerId._id);
+            const followsByMe = await this.followModel.find({
+                followerId: new Types.ObjectId(currentUserId),
+                followingId: { $in: followerUserIds },
+                status: 'accepted'
+            });
+
+            const followedSet = new Set(followsByMe.map(f => f.followingId.toString()));
+            followersList.forEach(f => {
+                if (f.followerId && f.followerId._id) {
+                    f.followerId.isFollowedByMe = followedSet.has(f.followerId._id.toString());
+                }
+            });
+        }
+
+        return { followers: followersList, total };
     }
 
     /**
@@ -176,7 +203,8 @@ export class FollowsService {
         userId: string,
         page = 1,
         limit = 20,
-    ): Promise<{ following: FollowDocument[]; total: number }> {
+        currentUserId?: string,
+    ): Promise<{ following: any[]; total: number }> {
         const skip = (page - 1) * limit;
 
         const [following, total] = await Promise.all([
@@ -196,8 +224,38 @@ export class FollowsService {
             }),
         ]);
 
-        return { following, total };
+        const followingList: any[] = following
+            .filter(f => f.followingId)
+            .map(f => {
+                const doc = f.toObject();
+                return {
+                    ...doc,
+                    followingId: {
+                        ...(doc.followingId as any),
+                        isFollowedByMe: false
+                    }
+                };
+            });
+
+        if (currentUserId && followingList.length > 0) {
+            const followingUserIds = followingList.map(f => f.followingId._id);
+            const followsByMe = await this.followModel.find({
+                followerId: new Types.ObjectId(currentUserId),
+                followingId: { $in: followingUserIds },
+                status: 'accepted'
+            });
+
+            const followedSet = new Set(followsByMe.map(f => f.followingId.toString()));
+            followingList.forEach(f => {
+                if (f.followingId && f.followingId._id) {
+                    f.followingId.isFollowedByMe = followedSet.has(f.followingId._id.toString());
+                }
+            });
+        }
+
+        return { following: followingList, total };
     }
+
 
     /**
      * Get pending follow requests
