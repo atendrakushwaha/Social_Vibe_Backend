@@ -38,7 +38,9 @@ export class PostsService {
         // Broadcast new post
         this.eventsGateway.emitNewPost(savedPost);
 
-        // TODO: Update user's post count
+        // Update user's post count
+        await this.userModel.findByIdAndUpdate(userId, { $inc: { postsCount: 1 } });
+
         // TODO: Create hashtag documents
         // TODO: Send notifications to mentioned users
 
@@ -48,7 +50,7 @@ export class PostsService {
     /**
      * Get post by ID
      */
-    async findById(postId: string, userId?: string): Promise<PostDocument> {
+    async findById(postId: string, userId?: string): Promise<any> {
         const post = await this.postModel
             .findOne({ _id: postId, deletedAt: null })
             .populate('userId', 'username fullName avatar isVerified')
@@ -68,7 +70,14 @@ export class PostsService {
             // TODO: Check if user is in close friends
         }
 
-        return post;
+        const postObj: any = post.toObject();
+        if (userId) {
+            postObj.isLiked = post.likes.some(id => id.toString() === userId);
+        } else {
+            postObj.isLiked = false;
+        }
+
+        return postObj;
     }
 
     /**
@@ -179,7 +188,9 @@ export class PostsService {
         post.deletedAt = new Date();
         await post.save();
 
-        // TODO: Update user's post count
+        // Update user's post count
+        await this.userModel.findByIdAndUpdate(userId, { $inc: { postsCount: -1 } });
+
         // TODO: Soft delete related likes, comments
     }
 
@@ -284,9 +295,16 @@ export class PostsService {
             await post.save();
         }
 
+        // Populate likers for response
+        const populatedPost = await this.postModel
+            .findById(postId)
+            .populate('likes', 'username fullName avatar')
+            .exec();
+
         return {
             liked: true,
             likesCount: post.likesCount,
+            likedBy: populatedPost?.likes || [],
         };
     }
 
@@ -309,8 +327,34 @@ export class PostsService {
             await post.save();
         }
 
+        // Populate likers for response
+        const populatedPost = await this.postModel
+            .findById(postId)
+            .populate('likes', 'username fullName avatar')
+            .exec();
+
         return {
             liked: false,
+            likesCount: post.likesCount,
+            likedBy: populatedPost?.likes || [],
+        };
+    }
+
+    /**
+     * Get list of users who liked a post
+     */
+    async getLikers(postId: string) {
+        const post = await this.postModel
+            .findById(postId)
+            .populate('likes', 'username fullName avatar isVerified')
+            .exec();
+
+        if (!post) {
+            throw new NotFoundException('Post not found');
+        }
+
+        return {
+            likedBy: post.likes,
             likesCount: post.likesCount,
         };
     }
@@ -337,6 +381,8 @@ export class PostsService {
             throw new NotFoundException('Post not found');
         }
 
+        const user = await this.userModel.findById(userId);
+
         // Increment comments count
         post.commentsCount += 1;
         await post.save();
@@ -347,7 +393,8 @@ export class PostsService {
             content,
             userId: {
                 _id: userId,
-                username: 'user',
+                username: user?.username || 'user',
+                avatar: user?.avatar || null,
             },
             createdAt: new Date(),
         };

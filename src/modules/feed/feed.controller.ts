@@ -50,9 +50,11 @@ export class FeedController {
     @ApiQuery({ name: 'page', required: false })
     @ApiQuery({ name: 'limit', required: false })
     async getLatest(
+        @Request() req,
         @Query('page') page = 1,
         @Query('limit') limit = 10,
     ) {
-        return this.feedService.getLatestFeed(+page, +limit);
+        const userId = req.user?.sub;
+        return this.feedService.getLatestFeed(+page, +limit, userId);
     }
 }

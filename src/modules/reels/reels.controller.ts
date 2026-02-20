@@ -6,10 +6,15 @@ import { extname } from 'path';
 import { ReelsService } from './reels.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+
 @ApiTags('Reels')
 @Controller('reels')
 export class ReelsController {
-    constructor(private readonly reelsService: ReelsService) { }
+    constructor(
+        private readonly reelsService: ReelsService,
+        private readonly cloudinaryService: CloudinaryService
+    ) { }
 
     @Post()
     @UseGuards(JwtAuthGuard)
@@ -18,16 +23,6 @@ export class ReelsController {
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(
         FileInterceptor('file', {
-            storage: diskStorage({
-                destination: './uploads',
-                filename: (req, file, cb) => {
-                    const randomName = Array(32)
-                        .fill(null)
-                        .map(() => Math.round(Math.random() * 16).toString(16))
-                        .join('');
-                    cb(null, `${randomName}${extname(file.originalname)}`);
-                },
-            }),
             limits: {
                 fileSize: 100 * 1024 * 1024, // 100MB
             },
@@ -50,10 +45,14 @@ export class ReelsController {
         try {
             let videoUrl = body.videoUrl;
             let thumbnailUrl = body.thumbnailUrl || 'https://placehold.co/400x600?text=No+Thumbnail';
-            const baseUrl = process.env.APP_URL || 'http://localhost:3000';
 
             if (file) {
-                videoUrl = `${baseUrl}/uploads/${file.filename}`;
+                const result = await this.cloudinaryService.uploadVideo(file);
+                videoUrl = result.secure_url;
+                // Auto-generate thumbnail from Cloudinary video if not provided
+                if (!body.thumbnailUrl) {
+                    thumbnailUrl = videoUrl.replace(/\.[^/.]+$/, ".jpg");
+                }
             }
 
             if (!videoUrl) {
